@@ -1,7 +1,7 @@
 name: AI-CEO-24/7
 on:
   schedule:
-    - cron: "0 */6 * * *" # Har 6 ghante mein refresh
+    - cron: "0 */6 * * *" # Har 6 ghante mein refresh taaki session active rahe
   push:
     branches: [ main ]
 jobs:
@@ -14,8 +14,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Install
-        run: pip install -r requirements.txt
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          npm install -g netlify-cli
       - name: Start Empire
         env:
           OPENROUTER: ${{ secrets.OPENROUTER }}
@@ -23,5 +25,9 @@ jobs:
           IG_PASS: ${{ secrets.IG_PASS }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CASHFREE_ID: ${{ secrets.CASHFREE_ID }}
+          CASHFREE_SECRET: ${{ secrets.CASHFREE_SECRET }}
+          NETLIFY: ${{ secrets.NETLIFY }}
+          AFFILIATE_LINK: ${{ secrets.AFFILIATE_LINK }}
         run: python main.py
         
