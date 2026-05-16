@@ -1,0 +1,6 @@
+instagrapi
+requests
+schedule
+flask
+gtts
+
