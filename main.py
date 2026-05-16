@@ -7,7 +7,7 @@ KEYS = {
     "OPENROUTER": os.getenv("OPENROUTER"),
     "PEXELS": os.getenv("PEXELS_API_KEY"),
     "IG_USER": "uzumakilabs",
-    "IG_PASS": "13643211097013",
+    "IG_PASS": "adarsh848210",
     "TELEGRAM_TOKEN": os.getenv("TELEGRAM_TOKEN"),
     "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID")
 }
