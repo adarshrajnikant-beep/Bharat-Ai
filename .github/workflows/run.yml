@@ -1,23 +1,34 @@
 name: AI-CEO-24/7
 on:
   schedule:
-    - cron: "0 */6 * * *" # Har 6 ghante mein refresh taaki session active rahe
+    - cron: "0 */3 * * *" # Har 3 ghante mein restart (Safety ke liye)
   push:
     branches: [ main ]
+  workflow_dispatch: # Taaki aap button dabakar khud bhi start kar sako
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    # Timeout set kar rahe hain taaki GitHub action error na de
+    timeout-minutes: 350 
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+          cache: 'pip' # Isse install fast hoga har baar
+
       - name: Install Dependencies
         run: |
+          pip install --upgrade pip
           pip install -r requirements.txt
-          npm install -g netlify-cli
+          # Agar MoviePy use kar rahe ho toh image-magick zaroori hai
+          sudo apt-get install imagemagick
+
       - name: Start Empire
         env:
           OPENROUTER: ${{ secrets.OPENROUTER }}
@@ -30,4 +41,3 @@ jobs:
           NETLIFY: ${{ secrets.NETLIFY }}
           AFFILIATE_LINK: ${{ secrets.AFFILIATE_LINK }}
         run: python main.py
-        
