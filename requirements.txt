@@ -5,3 +5,7 @@ flask
 gtts
 moviepy
 pillow
+numpy
+sqlite3
+openai
+python-dotenv
