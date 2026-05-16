@@ -3,4 +3,5 @@ requests
 schedule
 flask
 gtts
-
+moviepy
+pillow
