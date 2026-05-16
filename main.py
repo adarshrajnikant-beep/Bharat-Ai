@@ -6,7 +6,8 @@ from threading import Thread
 # --- 👑 AUTOMATIC KEY LOADER ---
 def get_key(key_name):
     val = os.getenv(key_name)
-    if not val: print(f"⚠️ Warning: {key_name} is missing!")
+    if not val: 
+        print(f"⚠️ Warning: {key_name} is missing!")
     return val
 
 KEYS = {
@@ -30,12 +31,15 @@ def notify(msg):
 
 # --- 🗄️ DATABASE SYSTEM ---
 def init_db():
-    conn = sqlite3.connect('agency_empire.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS memory 
-                 (username TEXT PRIMARY KEY, history TEXT, sentiment INTEGER, total_spent REAL, last_interaction TEXT)''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('agency_empire.db')
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS memory 
+                     (username TEXT PRIMARY KEY, history TEXT, sentiment INTEGER, total_spent REAL, last_interaction TEXT)''')
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"DB Init Error: {e}")
 
 # --- 💸 PAYMENT SYSTEM ---
 def get_payment_link(username):
@@ -64,8 +68,9 @@ def supreme_ai_decision(username, message):
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, 
                             json={"model": "google/gemini-pro", "messages": [{"role": "user", "content": prompt}]}, timeout=20).json()
         reply = res['choices'][0]['message']['content']
-        score = 2 if any(x in message.lower() for x in ["price", "buy", "interested"]) else 0
-        if score >= 2:
+        
+        # Interest check
+        if any(x in message.lower() for x in ["price", "buy", "interested", "paisa", "kitna"]):
             link = get_payment_link(username)
             if link: reply += f"\n\n🔥 Payment Link: {link}"
         return reply
@@ -82,44 +87,56 @@ def manage_empire(cl):
                 reply = supreme_ai_decision(user, msg)
                 cl.direct_answer(thread.id, reply)
                 notify(f"✅ Replied to @{user}")
-    except Exception as e: print(f"Cycle Err: {e}")
+    except Exception as e: 
+        print(f"Cycle Err: {e}")
 
-# --- 🚀 MASTER IGNITION (CSRF BYPASS ENABLED) ---
+# --- 🚀 MASTER IGNITION (404 & CSRF BYPASS) ---
 def main():
     print("🚀 IGNITION SEQUENCE STARTED...")
     init_db()
+    
     cl = Client()
-    cl.set_user_agent("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1")
+    # New Android User Agent (Less likely to be flagged)
+    cl.set_user_agent("Instagram 290.0.0.22.76 Android (30/11; 480dpi; 1080x2214; ASUS; ASUS_I003D; RR; qcom; en_US; 475253163)")
     
     try:
-        print("⏳ Fetching CSRF tokens...")
-        cl.get_timeline_feed() 
-        time.sleep(random.randint(5, 10)) 
+        # Step 1: Remove crash-prone pre-fetch
+        print(f"🔐 Secure Login attempt for {KEYS['IG_USER']}...")
         
-        print(f"🔐 Login attempt for {KEYS['IG_USER']}...")
+        # Step 2: Direct login with auto-verification
         cl.login(KEYS['IG_USER'], KEYS['IG_PASS'])
+        
+        # Step 3: Persistence
         cl.dump_settings("session.json")
-        notify("🔱 SYSTEM ARMORED & ONLINE. CEO is in the office.")
+        notify("🔱 SYSTEM ARMORED & ONLINE. CEO is in the office and 404 Bypassed!")
         
     except Exception as e:
         error_msg = str(e)
-        if "CSRF" in error_msg:
-            notify("⚠️ CSRF Detected. Sleeping 30s for Bypass...")
-            time.sleep(30)
+        if "challenge" in error_msg.lower() or "checkpoint" in error_msg.lower():
+            notify("⚠️ Challenge Detected! Phone par IG kholo aur 'It was me' confirm karo.")
+        elif "404" in error_msg:
+            # Re-attempt with clean session
             try:
+                print("🔄 404 Detected. Re-trying clean login...")
                 cl.login(KEYS['IG_USER'], KEYS['IG_PASS'], relogin=True)
-                notify("🔱 SYSTEM ONLINE (CSRF Bypassed)!")
-            except:
-                notify(f"❌ LOGIN FAILED: {error_msg}\nTip: Mobile app par 'This was me' confirm karo.")
+                notify("🔱 SYSTEM ONLINE (via Secondary Flow)!")
+            except Exception as e2:
+                notify(f"❌ 404 PERMANENT: {e2}")
         else:
             notify(f"❌ LOGIN FAILED: {error_msg}")
         return
 
+    # Automation Schedule
     schedule.every(2).minutes.do(lambda: manage_empire(cl))
+    
     while True:
-        schedule.run_pending()
-        time.sleep(1)
+        try:
+            schedule.run_pending()
+            time.sleep(1)
+        except Exception as e:
+            print(f"Loop Err: {e}")
+            time.sleep(10)
 
 if __name__ == "__main__":
     main()
-    
+        
