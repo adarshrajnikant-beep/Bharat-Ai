@@ -2,50 +2,49 @@ import schedule, time, requests, json, os, random, sqlite3, subprocess
 from instagrapi import Client
 from datetime import datetime
 from threading import Thread
-from gtts import gTTS
-from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, ColorClip
-from PIL import Image, ImageDraw
 
-# --- 👑 ALL-IN-ONE CONFIGURATION ---
+# --- 👑 AUTOMATIC KEY LOADER (CRITICAL FIX) ---
+def get_key(key_name):
+    val = os.getenv(key_name)
+    if not val:
+        print(f"⚠️ Warning: {key_name} is missing in GitHub Secrets!")
+    return val
+
 KEYS = {
-    "OPENROUTER": os.getenv("OPENROUTER"),
-    "PEXELS": os.getenv("PEXELS_API_KEY"),
-    "IG_USER": os.getenv("IG_USER"),
-    "IG_PASS": os.getenv("IG_PASS"),
-    "TELEGRAM_TOKEN": os.getenv("TELEGRAM_TOKEN"),
-    "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID"),
-    "CASHFREE_ID": os.getenv("CASHFREE_ID"),
-    "CASHFREE_SECRET": os.getenv("CASHFREE_SECRET")
+    "OPENROUTER": get_key("OPENROUTER"),
+    "PEXELS": get_key("PEXELS_API_KEY"),
+    "IG_USER": get_key("IG_USER"),
+    "IG_PASS": get_key("IG_PASS"),
+    "TELEGRAM_TOKEN": get_key("TELEGRAM_TOKEN"),
+    "TELEGRAM_CHAT_ID": get_key("TELEGRAM_CHAT_ID"),
+    "CASHFREE_ID": get_key("CASHFREE_ID"),
+    "CASHFREE_SECRET": get_key("CASHFREE_SECRET")
 }
 
-# --- 🗄️ INFINITE MEMORY & ML DATA ---
-def init_db():
-    conn = sqlite3.connect('agency_empire.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS memory 
-                 (username TEXT PRIMARY KEY, history TEXT, sentiment INTEGER, total_spent REAL, last_interaction TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS neural_weights (key TEXT PRIMARY KEY, value REAL)''')
-    # Default ML weights
-    c.execute("INSERT OR IGNORE INTO neural_weights VALUES ('scarcity', 0.5), ('politeness', 0.5)")
-    conn.commit()
-    conn.close()
-
+# --- 📡 NOTIFICATION ENGINE ---
 def notify(msg):
-    try: requests.post(f"https://api.telegram.org/bot{KEYS['TELEGRAM_TOKEN']}/sendMessage", 
-                      json={"chat_id": KEYS['TELEGRAM_CHAT_ID'], "text": f"🔱 CEO-LOG: {msg}"})
-    except: pass
+    print(f"📡 LOG: {msg}") # GitHub logs mein dikhega
+    try:
+        url = f"https://api.telegram.org/bot{KEYS['TELEGRAM_TOKEN']}/sendMessage"
+        payload = {"chat_id": KEYS['TELEGRAM_CHAT_ID'], "text": f"🔱 CEO-LOG:\n{msg}"}
+        requests.post(url, json=payload, timeout=10)
+    except Exception as e:
+        print(f"❌ Telegram Failed: {e}")
 
-# --- 🎬 AI CONTENT GENERATORS (Veo & Nano Banana 2) ---
-def generate_viral_video():
-    # Veo Logic: Unique 4K Cinematic Video
-    # In production, this calls Google Veo API
-    return "ai_video_veo.mp4" 
+# --- 🗄️ DATABASE SYSTEM ---
+def init_db():
+    try:
+        conn = sqlite3.connect('agency_empire.db')
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS memory 
+                     (username TEXT PRIMARY KEY, history TEXT, sentiment INTEGER, total_spent REAL, last_interaction TEXT)''')
+        conn.commit()
+        conn.close()
+        print("✅ Database Initialized.")
+    except Exception as e:
+        print(f"❌ DB Error: {e}")
 
-def generate_nano_image():
-    # Gemini 3 Flash Image Logic (Nano Banana 2)
-    return "ai_image_nano.jpg"
-
-# --- 💸 REVENUE & PAYMENT (Cashfree) ---
+# --- 💸 PAYMENT SYSTEM ---
 def get_payment_link(username):
     headers = {
         "x-client-id": KEYS["CASHFREE_ID"],
@@ -53,9 +52,10 @@ def get_payment_link(username):
         "x-api-version": "2023-08-01",
         "Content-Type": "application/json"
     }
-    order_id = f"REV_{int(time.time())}"
     data = {
-        "order_id": order_id, "order_amount": 4999.00, "order_currency": "INR",
+        "order_id": f"REV_{int(time.time())}",
+        "order_amount": 4999.00,
+        "order_currency": "INR",
         "customer_details": {"customer_id": username, "customer_phone": "9999999999"}
     }
     try:
@@ -63,85 +63,78 @@ def get_payment_link(username):
         return f"https://www.cashfree.com/checkout/pay/{res['payment_session_id']}"
     except: return None
 
-# --- 🧠 THE BRAIN (Deep Learning + Reasoning) ---
+# --- 🧠 BRAIN & DECISION ---
 def supreme_ai_decision(username, message):
-    conn = sqlite3.connect('agency_empire.db')
-    c = conn.cursor()
-    c.execute("SELECT history, sentiment FROM memory WHERE username=?", (username,))
-    row = c.fetchone()
-    history = row[0] if row else "New Client"
-    
-    # Deep Learning Sentiment Check
-    score = 0
-    if any(x in message.lower() for x in ["buy", "price", "how", "interested"]): score = 2
-    
-    prompt = f"User @{username}. History: {history}. Msg: {message}. Sentiment Score: {score}. Close ₹4999 deal in Hinglish."
-    
-    headers = {"Authorization": f"Bearer {KEYS['OPENROUTER']}"}
     try:
-        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, 
-                            json={"model": "openai/gpt-4o", "messages": [{"role": "user", "content": prompt}]}).json()
-        reply = res['choices'][0]['message']['content']
+        headers = {"Authorization": f"Bearer {KEYS['OPENROUTER']}"}
+        prompt = f"Customer @{username} said: {message}. Goal: Sell ₹4999 AI Agency service in Hinglish."
         
-        # Payment Push if ready
+        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, 
+                            json={"model": "google/gemini-pro", "messages": [{"role": "user", "content": prompt}]}, timeout=20).json()
+        
+        reply = res['choices'][0]['message']['content']
+        score = 2 if any(x in message.lower() for x in ["price", "buy", "interested"]) else 0
+        
         if score >= 2:
             link = get_payment_link(username)
-            if link: reply += f"\n\n🔥 Deal Link: {link}"
+            if link: reply += f"\n\n🔥 Payment Link: {link}"
             
         return reply, score
-    except: return "Bhai, 2 min ruko details bhej raha hoon! 🔱", 0
+    except Exception as e:
+        return f"Bhai thoda wait karo, system load ho raha hai. (Err: {e})", 0
 
-# --- 🏰 THE UNSTOPPABLE CYCLE ---
+# --- 🏰 THE EMPIRE ENGINE ---
 def manage_empire(cl):
+    now = datetime.now()
+    print(f"🔄 Cycle Start: {now.strftime('%H:%M:%S')}")
     try:
-        # 1. AUTONOMOUS INTERACTION (DMs & Comments)
+        # DM Response Logic
         threads = cl.direct_threads()
         for thread in threads:
             if thread.unread_count > 0:
                 user = thread.users[0].username
                 msg = thread.messages[0].text
+                print(f"📩 New Message from @{user}: {msg}")
                 
-                reply, sentiment = supreme_ai_decision(user, msg)
+                reply, _ = supreme_ai_decision(user, msg)
                 cl.direct_answer(thread.id, reply)
-                
-                # ML Update (Learning)
-                conn = sqlite3.connect('agency_empire.db')
-                c = conn.cursor()
-                # Update Infinite Memory
-                c.execute("INSERT OR REPLACE INTO memory (username, history, sentiment, last_interaction) VALUES (?, ?, ?, ?)", 
-                          (user, (msg[:100]), sentiment, datetime.now().isoformat()))
-                conn.commit()
-                conn.close()
+                notify(f"✅ Replied to @{user}")
 
-        # 2. CONTENT POSTING (Reels/Stories)
-        now = datetime.now()
-        if now.hour == 18 and now.minute == 0:
-            video = generate_viral_video() # Veo AI
-            cl.clip_upload(video, "Future of AI Marketing. 🔱 #ai #business")
-            notify("💰 Daily Viral Reel Posted.")
+    except Exception as e:
+        notify(f"⚠️ Cycle Warning: {e}")
 
-        if now.hour == 22:
-            notify(f"📊 Daily Settlement: System is active. Total Leads today: {len(threads)}")
-
-    except Exception as e: print(f"Cycle Error: {e}")
-
-# --- 🚀 IGNITION ---
+# --- 🚀 MASTER IGNITION ---
 def main():
+    print("🚀 IGNITION SEQUENCE STARTED...")
     init_db()
+    
     cl = Client()
+    # Bypass settings
     cl.set_user_agent("Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1")
     
     try:
+        print(f"🔐 Attempting Login for {KEYS['IG_USER']}...")
         cl.login(KEYS['IG_USER'], KEYS['IG_PASS'])
-        notify("🔱 SYSTEM ARMORED & ONLINE. All-to-All Control: ACTIVE.")
-    except: return
+        notify("🔱 SYSTEM ARMORED & ONLINE. CEO is in the office.")
+    except Exception as e:
+        error_msg = f"❌ LOGIN FAILED: {str(e)}"
+        print(error_msg)
+        # Is message ko Telegram par bhejte hain bina notify function ke (for safety)
+        requests.post(f"https://api.telegram.org/bot{KEYS['TELEGRAM_TOKEN']}/sendMessage", 
+                      json={"chat_id": KEYS['TELEGRAM_CHAT_ID'], "text": error_msg})
+        return
 
+    # Automation Schedule
     schedule.every(2).minutes.do(lambda: manage_empire(cl))
     
+    print("⚙️ Automation Engine: RUNNING")
     while True:
         schedule.run_pending()
         time.sleep(1)
 
 if __name__ == "__main__":
-    main()
-            
+    try:
+        main()
+    except Exception as fatal:
+        print(f"💀 FATAL SYSTEM CRASH: {fatal}")
+    
